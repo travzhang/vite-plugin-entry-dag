@@ -13,6 +13,7 @@ interface Options {
   outputFile?: string  // 输出文件名
 }
 
+
 export default function (options: Options = {}): Plugin {
   const { entries = [], outputFile = 'vite-plugin-entry-dag.json' } = options
   let config: any
