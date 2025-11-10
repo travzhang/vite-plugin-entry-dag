@@ -27,6 +27,9 @@
     "route",
     "dynamic-import"
   ],
+  "peerDependencies": {
+    "vite": "^5.0.0 || ^6.0.0 || ^7.0.0"
+  },
   "devDependencies": {
     "@types/node": "^24.10.0",
     "typescript": "^5.9.3",
