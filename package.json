@@ -1,0 +1,45 @@
+{
+  "name": "vite-plugin-entry-dag",
+  "version": "0.1.0",
+  "description": "Vite 插件：从入口路由生成依赖树并记录模块发现顺序",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "dependency-graph",
+    "route",
+    "dynamic-import"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "vite": "^4.0.0 || ^5.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.5.0",
+    "unbuild": "^2.0.0"
+  },
+  "scripts": {
+    "build": "unbuild",
+    "prepublishOnly": "npm run build"
+  }
+}
