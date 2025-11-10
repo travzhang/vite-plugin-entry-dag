@@ -5,6 +5,7 @@ import type { Plugin } from 'vite'
 interface Options {
   entries?: string[]   // 路由入口模块绝对路径数组
   outputFile?: string  // 输出文件名
+  extensions?: string[] // 受支持的扩展名（如：['.ts','vue']），默认 js/jsx/ts/tsx/vue
 }
 
 interface DagNode {
@@ -53,6 +54,16 @@ export default function (options: Options = {}): Plugin {
         const rel = path.relative(root, clean)
         return rel || clean
       }
+      const normalizeExt = (ext: string) => {
+        const e = ext.trim().toLowerCase()
+        return e.startsWith('.') ? e : `.${e}`
+      }
+      const defaultExts = ['.js', '.jsx', '.ts', '.tsx', '.vue']
+      const configuredExts = Array.isArray(options.extensions) && options.extensions.length > 0
+        ? options.extensions.map(normalizeExt)
+        : defaultExts
+      const supportedExts = new Set(configuredExts)
+      const hasSupportedExt = (id: string) => supportedExts.has(path.extname(normalizeId(id)).toLowerCase())
       const shouldSkip = (id: string) => {
         if (!id) return true
         if (id.includes('node_modules')) return true
@@ -77,20 +88,33 @@ export default function (options: Options = {}): Plugin {
       for (const entry of entries) {
         if (!entry) continue
         const visited = new Set<string>() // 控制递归，避免死循环
-        const entryRel = ensureNode(entry)
-        entryRelIds.push(entryRel)
+        if (hasSupportedExt(entry)) {
+          const entryRel = ensureNode(entry)
+          entryRelIds.push(entryRel)
+        }
 
         const traverse = (id: string) => {
           const info = this.getModuleInfo(id)
-          // 即使没有 info，也至少保证节点被记录
-          const fromRel = ensureNode(id)
+          const fromRel = toRel(id)
+          // 仅当源节点是受支持类型时记录节点
+          if (hasSupportedExt(id) && !nodeIdToOrder.has(fromRel)) {
+            ensureNode(id)
+          }
+
           if (!info) return
 
           // 静态 import
           for (const dep of info.importedIds) {
             if (shouldSkip(dep)) continue
-            const toRel = ensureNode(dep)
-            addEdge(fromRel, toRel, 'static')
+            const depRel = toRel(dep)
+            // 仅当两端均受支持类型时记录边
+            if (hasSupportedExt(id) && hasSupportedExt(dep)) {
+              if (!nodeIdToOrder.has(depRel)) ensureNode(dep)
+              addEdge(fromRel, depRel, 'static')
+            } else if (hasSupportedExt(dep) && !nodeIdToOrder.has(depRel)) {
+              // 只记录目标节点，保持节点完整性（边需两端都支持才添加）
+              ensureNode(dep)
+            }
             if (!visited.has(dep)) {
               visited.add(dep)
               traverse.call(this, dep)
@@ -99,8 +123,13 @@ export default function (options: Options = {}): Plugin {
           // 动态 import
           for (const dep of info.dynamicallyImportedIds) {
             if (shouldSkip(dep)) continue
-            const toRel = ensureNode(dep)
-            addEdge(fromRel, toRel, 'dynamic')
+            const depRel = toRel(dep)
+            if (hasSupportedExt(id) && hasSupportedExt(dep)) {
+              if (!nodeIdToOrder.has(depRel)) ensureNode(dep)
+              addEdge(fromRel, depRel, 'dynamic')
+            } else if (hasSupportedExt(dep) && !nodeIdToOrder.has(depRel)) {
+              ensureNode(dep)
+            }
             if (!visited.has(dep)) {
               visited.add(dep)
               traverse.call(this, dep)
